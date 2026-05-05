@@ -88,11 +88,17 @@ def generar_pdf(nombre, titulo, nota, foto, lat, lon):
     # Añadir la foto
     if foto:
         img = Image.open(foto)
-        # Redimensionar para que quepa en el PDF manteniendo proporción
+        # Convertimos a RGB para evitar problemas con canales alfa (transparencias)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        
         img.thumbnail((400, 400))
         img_buffer = io.BytesIO()
         img.save(img_buffer, format='JPEG')
-        pdf.image(img_buffer, x=10, y=None, w=100)
+        img_buffer.seek(0) # Volvemos al principio del archivo en memoria
+        
+        # El truco: le pasamos un nombre ficticio para que FPDF sepa el formato
+        pdf.image(img_buffer, x=10, y=None, w=100, type='JPEG')
     
     return pdf.output(dest='S').encode('latin-1')
 
