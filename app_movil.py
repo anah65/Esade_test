@@ -87,7 +87,7 @@ if location is not None and location.get("latitude") is not None:
 
         # Show on map
         df_map = pd.DataFrame(restaurants)
-        st.subheader("🗺️ Map of nearby restaurants")
+        st.subheader("Map of nearby restaurants")
         st.map(df_map)
 
         st.metric(
