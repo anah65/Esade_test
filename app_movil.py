@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from streamlit_gps_location import gps_location_button
 
 # Page configuration
