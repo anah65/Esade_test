@@ -1,40 +1,100 @@
 import streamlit as st
 import pandas as pd
+import requests
 from streamlit_gps_location import gps_location_button
 
-# Page configuration
-st.set_page_config(
-    page_title="My Mobile App",
-    layout="centered"
-)
+# ===============================
+# 1. Page config
+# ===============================
+st.set_page_config(page_title="Nearby Restaurants", layout="centered")
 
-st.title("Streamlit mobile app")
+st.title("Find Restaurants Near You")
 
-# User input
+# ===============================
+# 2. User input
+# ===============================
 name = st.text_input("What is your name?")
-age = st.slider("How old are you?", 0, 100, 25)
+radius = st.slider("Search radius (meters)", 100, 2000, 1000)
 
-# GPS location
-st.subheader("Location")
-location_data = gps_location_button(buttonText="Get my location")
+# ===============================
+# 3. Get location
+# ===============================
+st.subheader("Your Location")
+location = gps_location_button("Get my location")
 
-# Only create the map if we have valid location data
-if location_data is not None:
-    st.write("Your location data:")
-    st.json(location_data)
+# ===============================
+# 4. Function to get nearby restaurants
+# ===============================
+@st.cache_data
+def get_nearby_restaurants(lat, lon, radius):
+    url = "https://overpass-api.de/api/interpreter"
 
-    # Ensure latitude and longitude are not None
-    if location_data.get('latitude') is not None and location_data.get('longitude') is not None:
-        map_data = pd.DataFrame({
-            'lat': [location_data['latitude']],
-            'lon': [location_data['longitude']]
+    query = f"""
+    [out:json];
+    node
+      (around:{radius},{lat},{lon})
+      ["amenity"="restaurant"];
+    out;
+    """
+
+    response = requests.get(url, params={'data': query})
+    data = response.json()
+
+    restaurants = []
+    for element in data["elements"]:
+        name = element.get("tags", {}).get("name", "Unnamed restaurant")
+        lat_r = element.get("lat")
+        lon_r = element.get("lon")
+
+        restaurants.append({
+            "name": name,
+            "lat": lat_r,
+            "lon": lon_r
         })
-        st.subheader("Your location on the map")
-        st.map(map_data)
+
+    return restaurants
+
+
+# ===============================
+# 5. Main logic
+# ===============================
+if location is not None and location.get("latitude") is not None:
+
+    lat = location["latitude"]
+    lon = location["longitude"]
+
+    st.success(f"Hello {name}! Here are places near you")
+
+    # Map of user
+    user_map = pd.DataFrame({"lat": [lat], "lon": [lon]})
+    st.map(user_map)
+
+    # Load restaurants
+    with st.spinner("Searching for restaurants..."):
+        restaurants = get_nearby_restaurants(lat, lon, radius)
+
+    # ===============================
+    # 6. Display results
+    # ===============================
+    st.subheader("🍴 Restaurants nearby")
+
+    if len(restaurants) == 0:
+        st.warning("No restaurants found nearby. Try increasing the radius.")
+    else:
+        # Show list
+        for r in restaurants[:10]:
+            st.write(f"• {r['name']}")
+
+        # Show on map
+        df_map = pd.DataFrame(restaurants)
+        st.subheader("🗺️ Map of nearby restaurants")
+        st.map(df_map)
+
+        st.metric(
+            "Restaurants found",
+            len(restaurants),
+            help="Total number of restaurants detected in your area"
+        )
+
 else:
-    st.info("Press 'Get my location' to see your location on the map.")
-
-# Submit button
-if st.button("Submit", use_container_width=True):
-    st.success(f"Hello {name}, you are {age} years old")
-
+    st.info("Click the button to get your location.")
