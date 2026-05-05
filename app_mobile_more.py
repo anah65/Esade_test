@@ -6,10 +6,10 @@ from datetime import datetime
 from PIL import Image
 import io
 
-# 1. Configuración de la página
-st.set_page_config(page_title="Bio-Reportero GPS", layout="centered")
+# 1. Page configuration
+st.set_page_config(page_title="Bio-Reporter GPS", layout="centered")
 
-# Estilo visual básico para móvil
+# Basic mobile visual style
 st.markdown("""
     <style>
     .stButton>button {
@@ -23,100 +23,98 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🌿 Bio-Reportero Pro")
-st.write("Registra tus hallazgos científicos con GPS y fotos.")
+st.title("Bio-Reporter Pro")
+st.write("Record your scientific findings using GPS and photos.")
 
-# 2. Datos del Alumno e Informe
-with st.expander("👤 Información del Investigador", expanded=True):
-    nombre = st.text_input("Nombre del alumno:")
-    titulo_hallazgo = st.text_input("¿Qué has encontrado?", placeholder="Ej: Hormiguero, Cuarzo, Encina...")
-    notas = st.text_area("Notas de campo:", placeholder="Describe las características...")
+# 2. User and Report Information
+with st.expander("Researcher Information", expanded=True):
+    name = st.text_input("Student name:")
+    finding_title = st.text_input("What did you find?", placeholder="Example: Anthill, Quartz, Oak...")
+    notes = st.text_area("Field notes:", placeholder="Describe the characteristics...")
 
-# 3. Ubicación GPS
-st.subheader("📍 1. Ubicación")
-location_data = gps_location_button(buttonText="Fijar Coordenadas GPS")
+# 3. GPS Location
+st.subheader("1. Location")
+location_data = gps_location_button(buttonText="Set GPS Coordinates")
 
 lat, lon = None, None
 if location_data:
     lat = location_data.get('latitude')
     lon = location_data.get('longitude')
     if lat and lon:
-        st.success(f"Ubicación fijada: {lat:.5f}, {lon:.5f}")
-        # Mostrar mapa pequeño de referencia
-        df_mapa = pd.DataFrame({'lat': [lat], 'lon': [lon]})
-        st.map(df_mapa, zoom=15)
+        st.success(f"Location set: {lat:.5f}, {lon:.5f}")
+        # Show small reference map
+        df_map = pd.DataFrame({'lat': [lat], 'lon': [lon]})
+        st.map(df_map, zoom=15)
 
-# 4. Cámara
-st.subheader("📸 2. Evidencia Visual")
-foto = st.camera_input("Toma una foto del hallazgo")
+# 4. Camera
+st.subheader("2. Visual Evidence")
+photo = st.camera_input("Take a photo of the finding")
 
-# 5. Función para construir el PDF
-def generar_pdf(nombre, titulo, nota, foto, lat, lon):
+# 5. Function to build the PDF
+def generate_pdf(name, title, note, photo, lat, lon):
     pdf = FPDF()
     pdf.add_page()
     
-    # Encabezado decorativo
+    # Decorative header
     pdf.set_fill_color(46, 125, 50)
     pdf.rect(0, 0, 210, 40, 'F')
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 20)
-    pdf.cell(0, 20, 'INFORME DE CAMPO', ln=True, align='C')
+    pdf.cell(0, 20, 'FIELD REPORT', ln=True, align='C')
     
-    # Cuerpo del documento
+    # Document body
     pdf.set_text_color(0, 0, 0)
     pdf.ln(25)
     pdf.set_font("Arial", 'B', 12)
-    pdf.cell(100, 10, f"Investigador: {nombre}")
-    pdf.cell(0, 10, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", ln=True, align='R')
+    pdf.cell(100, 10, f"Researcher: {name}")
+    pdf.cell(0, 10, f"Date: {datetime.now().strftime('%d/%m/%Y')}", ln=True, align='R')
     
-    # Datos de ubicación
+    # Location data
     pdf.set_font("Arial", 'I', 11)
     if lat and lon:
-        pdf.cell(0, 10, f"Coordenadas: Lat {lat:.5f}, Lon {lon:.5f}", ln=True)
+        pdf.cell(0, 10, f"Coordinates: Lat {lat:.5f}, Lon {lon:.5f}", ln=True)
     
     pdf.ln(5)
     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
     pdf.ln(5)
     
-    # Título y Descripción
+    # Title and Description
     pdf.set_font("Arial", 'B', 14)
-    pdf.cell(0, 10, f"Hallazgo: {titulo}", ln=True)
+    pdf.cell(0, 10, f"Finding: {title}", ln=True)
     pdf.set_font("Arial", '', 12)
-    pdf.multi_cell(0, 8, f"Observaciones:\n{nota}")
+    pdf.multi_cell(0, 8, f"Observations:\n{note}")
     pdf.ln(10)
     
-# AÑADIR LA FOTO (Versión corregida)
-    if foto:
-        img = Image.open(foto)
+    # Add image
+    if photo:
+        img = Image.open(photo)
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
         
         img.thumbnail((400, 400))
         
-        # Guardamos temporalmente en el disco para que FPDF no se pierda
-        temp_filename = "temp_evidencia.jpg"
+        # Save temporarily for FPDF
+        temp_filename = "temp_evidence.jpg"
         img.save(temp_filename, format='JPEG')
         
-        # Ahora le pasamos la ruta del archivo real
         pdf.image(temp_filename, x=10, y=None, w=100)
     
-    # Importante: para evitar errores de caracteres especiales en el PDF
-    # usamos 'latin-1' con reemplazo de errores
+    # Avoid encoding issues
     return pdf.output(dest='S').encode('latin-1', errors='replace')
 
-# 6. Botón Final de Descarga
-if foto and nombre and titulo_hallazgo and lat:
+# 6. Final Download Button
+if photo and name and finding_title and lat:
     st.divider()
-    if st.button("🛠️ Generar Informe Final (PDF)"):
+    if st.button("Generate Final Report (PDF)"):
         try:
-            pdf_data = generar_pdf(nombre, titulo_hallazgo, notas, foto, lat, lon)
+            pdf_data = generate_pdf(name, finding_title, notes, photo, lat, lon)
             st.download_button(
-                label="📥 DESCARGAR INFORME",
+                label="Download Report",
                 data=pdf_data,
-                file_name=f"Informe_{nombre.replace(' ', '_')}.pdf",
+                file_name=f"Report_{name.replace(' ', '_')}.pdf",
                 mime="application/pdf"
             )
         except Exception as e:
-            st.error(f"Hubo un problema al crear el PDF: {e}")
+            st.error(f"There was a problem generating the PDF: {e}")
 else:
-    st.info("💡 Para desbloquear el PDF: Escribe tu nombre, un título, captura el GPS y haz una foto.")
+    st.info("To unlock the PDF: enter your name, a title, capture GPS and take a photo.")
