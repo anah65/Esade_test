@@ -3,5 +3,5 @@ streamlit_gps_location
 pandas
 fpdf
 datetime
-PIL
+Pillow
 io
